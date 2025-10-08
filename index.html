@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cronograma de Atracação - Porto de Santos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    header {
+      background-color: #004080;
+      color: white;
+      text-align: center;
+      padding: 30px 20px;
+      position: relative;
+    }
+
+    header h1 {
+      margin-bottom: 10px;
+    }
+
+    header p {
+      font-style: italic;
+      font-size: 1.1em;
+    }
+
+    /* Ícone de notificações minimalista */
+    .notification-icon {
+      position: absolute;
+      top: 22px;
+      right: 25px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.2s ease, opacity 0.3s;
+      opacity: 0.9;
+    }
+
+    .notification-icon:hover {
+      transform: scale(1.1);
+      opacity: 1;
+    }
+
+    .notification-count {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      background: red;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      border-radius: 50%;
+      padding: 3px 6px;
+    }
+
+    /* Painel de notificações */
+    .notification-panel {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      width: 320px;
+      max-height: 400px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      overflow-y: auto;
+      display: none;
+      z-index: 1000;
+    }
+
+    .notification-panel.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .notification-panel h3 {
+      margin: 0;
+      background-color: #004080;
+      color: white;
+      padding: 12px;
+      border-radius: 10px 10px 0 0;
+      text-align: center;
+    }
+
+    .notification {
+      padding: 10px 15px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .notification:hover {
+      background-color: #f1f1f1;
+    }
+
+    .notification time {
+      display: block;
+      font-size: 0.85em;
+      color: #777;
+    }
+
+    main {
+      width: 95%;
+      max-width: 1000px;
+      margin: 30px auto;
+      overflow-x: auto;
+    }
+
+    .update-info {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #0073e6;
+      color: white;
+      border-radius: 5px;
+      font-style: italic;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 40px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #004080;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .status-atualizado {
+      color: green;
+      font-weight: bold;
+    }
+
+    .status-pendente {
+      color: orange;
+      font-weight: bold;
+    }
+    .status-emergencia {
+      color: red;
+      font-weight: bold;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background-color: #004080;
+      color: white;
+      margin-top: 40px;
+    }
+
+    .day-divider {
+      text-align: center;
+      background-color: #e0ebff;
+      color: #004080;
+      padding: 12px;
+      font-weight: bold;
+      border-radius: 5px;
+      margin: 30px 0 10px 0;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Cronograma de Atracação de Navios - Porto de Santos/SP</h1>
+    <p>Atualização em tempo real</p>
+
+    <div class="notification-icon" id="notificationIcon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 22c1.104 0 2-.896 2-2H10a2 2 0 0 0 2 2zM18 16v-5a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2z"/>
+      </svg>
+    </div>
+    <div class="notification-count" id="notificationCount">3</div>
+  </header>
+
+  <div class="notification-panel" id="notificationPanel">
+    <h3>Notificações</h3>
+    <div id="notificationList">
+      <div class="notification">
+        Alerta: <strong>{{ $('Define Dia e Horário de Atracação').item.json.data[6].identificadorNavio }}</strong> Problema técnico no leme
+        <time>{{ $('Define Dia e Horário de Atracação').item.json.data[6].dataSolicitacao }}</time>
+      </div>
+      <div class="notification">
+        Alerta: <strong>{{ $('Define Dia e Horário de Atracação').item.json.data[7].identificadorNavio }}</strong> Janela de atracação ocupada.
+        <time>{{ $('Define Dia e Horário de Atracação').item.json.data[7].dataSolicitacao }}</time>
+      </div>
+      <div class="notification">
+        Alerta: <strong>{{ $('Define Dia e Horário de Atracação').item.json.data[8].identificadorNavio }}</strong> Atracagem cancelada e adiada por atraso.
+        <time>{{ $('Define Dia e Horário de Atracação').item.json.data[8].dataSolicitacao }}</time>
+      </div>
+       <div class="notification">
+        Alerta: <strong>{{ $json.output[9].identificador }}</strong> Atraso de 2h e 15 por maré desfavorável.
+        <time>{{ $json.output[8].dataPrevisaoChegada }}</time>
+      </div>
+      <div class="notification">
+        Alerta: <strong>{{ $('Define Dia e Horário de Atracação').item.json.data[9].identificadorNavio }}</strong> Desvio de rota por emergência médica.
+        <time>{{ $('Define Dia e Horário de Atracação').item.json.data[9].dataSolicitacao }}</time>
+      </div>
+    </div>
+  </div>
+ 
+  
+  <main>
+    <div class="update-info" id="updateInfo">
+      Última atualização: --
+    </div>
+
+
+    <div class="day-divider"> 02 de Setembro de 2025</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Horário</th>
+          <th>Navio</th>
+          <th>Status</th>
+          <th>Manobra</th>
+          <th>Armadores</th>
+          <th>Rebocadores</th>
+          <th>Terminais</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[0].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[0].identificadorNavio }}</td>
+          <td class="status-atualizado">{{ $('Define Dia e Horário de Atracação').item.json.data[0].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[0].manobraTipo.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>✔</td>
+          <td>✔</td>
+        </tr>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[1].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[1].identificadorNavio }}</td>
+          <td class="status-atualizado">{{ $('Define Dia e Horário de Atracação').item.json.data[1].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[1].manobraTipo.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>✔</td>
+          <td>✔</td>
+        </tr>
+      </tbody>
+    </table>
+
+  
+    <div class="day-divider"> 03 de Setembro de 2025</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Horário</th>
+          <th>Navio</th>
+          <th>Status</th>
+          <th>Manobra</th>
+          <th>Armadores</th>
+          <th>Rebocadores</th>
+          <th>Terminais</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[2].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[2].identificadorNavio }}</td>
+          <td class="status-atualizado">{{ $('Define Dia e Horário de Atracação').item.json.data[2].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[2].manobraTipo.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>✔</td>
+          <td>✔</td>
+        </tr>
+      </tbody>
+    </table>
+
+    
+    <div class="day-divider"> 04 de Setembro de 2025</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Horário</th>
+          <th>Navio</th>
+          <th>Status</th>
+          <th>Manobra</th>
+          <th>Armadores</th>
+          <th>Rebocadores</th>
+          <th>Terminais</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[3].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[3].identificadorNavio }}</td>
+          <td class="status-atualizado">{{ $('Define Dia e Horário de Atracação').item.json.data[3].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[3].manobraTipo.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>✔</td>
+          <td>✔</td>
+        </tr>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[4].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[4].identificadorNavio }}</td>
+          <td  class="status-pendente">{{ $json.output[4].status.toUpperCase() }}</td>
+         <td>{{ $json.output[4].tipoManobra.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>-</td>
+          <td>–</td>
+        </tr>
+        
+      </tbody>
+    </table>
+
+    <div class="day-divider"> 05 de Setembro de 2025</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Horário</th>
+          <th>Navio</th>
+          <th>Status</th>
+          <th>Manobra</th>
+          <th>Armadores</th>
+          <th>Rebocadores</th>
+          <th>Terminais</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[5].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[5].identificadorNavio }}</td>
+          <td class="status-pendente">{{ $('Define Dia e Horário de Atracação').item.json.data[5].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[5].manobraTipo.toUpperCase() }}</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+        </tr>
+      </tbody>
+    </table>
+
+     <div class="day-divider"> 06 de Setembro de 2025</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Horário</th>
+          <th>Navio</th>
+          <th>Status</th>
+          <th>Manobra</th>
+          <th>Armadores</th>
+          <th>Rebocadores</th>
+          <th>Terminais</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[6].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[6].identificadorNavio }}</td>
+          <td class="status-emergencia">{{ $('Define Dia e Horário de Atracação').item.json.data[6].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[6].manobraTipo.toUpperCase() }}</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+        </tr>
+         <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[7].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[7].identificadorNavio }}</td>
+          <td class="status-pendente">{{ $('Define Dia e Horário de Atracação').item.json.data[7].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[7].manobraTipo.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>✔</td>
+          <td>✔</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="day-divider"> 07 de Setembro de 2025</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Horário</th>
+          <th>Navio</th>
+          <th>Status</th>
+          <th>Manobra</th>
+          <th>Armadores</th>
+          <th>Rebocadores</th>
+          <th>Terminais</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[8].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[8].identificadorNavio }}</td>
+          <td class="status-atualizado">{{ $('Define Dia e Horário de Atracação').item.json.data[8].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[8].manobraTipo.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>✔</td>
+          <td>✔</td>
+        </tr>
+      </tbody>
+    </table>
+
+  <div class="day-divider"> 08 de Setembro de 2025</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Horário</th>
+          <th>Navio</th>
+          <th>Status</th>
+          <th>Manobra</th>
+          <th>Armadores</th>
+          <th>Rebocadores</th>
+          <th>Terminais</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[9].dataSolicitacao }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[9].identificadorNavio }}</td>
+          <td class="status-atualizado">{{ $('Define Dia e Horário de Atracação').item.json.data[9].status.toUpperCase() }}</td>
+          <td>{{ $('Define Dia e Horário de Atracação').item.json.data[9].manobraTipo.toUpperCase() }}</td>
+          <td>✔</td>
+          <td>✔</td>
+          <td>✔</td>
+        </tr>
+      </tbody>
+    </table>
+    
+      </tbody>
+    </table>
+
+  </main>
+
+  <footer>
+    &copy; 2025 Porto de Santos. Todos os direitos reservados.
+  </footer>
+
+  <script>
+    const icon = document.getElementById('notificationIcon');
+    const panel = document.getElementById('notificationPanel');
+    const count = document.getElementById('notificationCount');
+    const list = document.getElementById('notificationList');
+    const updateInfo = document.getElementById('updateInfo');
+
+    // Atualiza hora de "Última atualização"
+    function atualizarHora() {
+      const agora = new Date();
+      const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      updateInfo.textContent = `Última atualização: ${hora}`;
+    }
+    atualizarHora();
+
+    icon.addEventListener('click', () => {
+      panel.classList.toggle('active');
+      count.style.display = 'none';
+    });
+
+    setTimeout(() => {
+      const newNotif = document.createElement('div');
+      newNotif.classList.add('notification');
+      newNotif.innerHTML = `
+        Nova atualização: <strong>MAERSK-SAO-011</strong> atracação prevista alterada.
+        <time>${new Date().toLocaleString('pt-BR')}</time>
+      `;
+      list.prepend(newNotif);
+      count.style.display = 'block';
+      count.textContent = parseInt(count.textContent) + 1;
+      atualizarHora(); 
+    }, 5000);
+  </script>
+
+</body>
+</html>
